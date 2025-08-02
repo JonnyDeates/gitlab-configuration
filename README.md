@@ -24,6 +24,8 @@
 
 
 ### Additional Links:
+
+Youtube link for video instruction: 
 Docs for postgresql configuration for install in github
 
 https://gitlab.com/gitlab-org/charts/gitlab/-/blob/master/doc/advanced/external-db/_index.md
