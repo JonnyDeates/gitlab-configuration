@@ -1,8 +1,11 @@
 certmanager:
-  installCRDs: true
+  installCRDs: false # If you already installed this leave to false, else turn to true
   nameOverride: certmanager
   rbac:
     create: true
+certmanager-issuer:
+  email: example@gmail.com # Update this to your email
+
 gitlab:
   toolbox:
     antiAffinityLabels:
@@ -71,9 +74,7 @@ global:
       database:
         skipSequenceAlteration: false
       enabled: false
-      topologyServiceClient:
-        tls:
-          enabled: false
+      topologyServiceClient: null
     ciSecureFiles:
       bucket: gitlab-ci-secure-files
       connection: {}
@@ -268,7 +269,7 @@ global:
     labels: {}
   deployment:
     annotations: {}
-  edition: ee
+  edition: ce # Make sure this is Community Edition unless you want to setup Enterprise version
   email:
     display_name: GitLab
     from: ''
@@ -315,7 +316,7 @@ global:
       repository: registry.gitlab.com/gitlab-org/build/cng/gitlab-base
   gitlabVersion: 18.2.0
   hosts:
-    domain: example.com
+    domain: example.com # This will be the main domain, in this case it is gitlab.example.com
     externalIP: null
     gitlab: {}
     hostSuffix: null
@@ -327,19 +328,23 @@ global:
     registry: {}
     smartcard: {}
     ssh: null
-    tls: {}
+    tls:
+      enabled: true
   hpa:
     apiVersion: ''
   image: {}
   ingress:
-    annotations: {}
-    apiVersion: ''
+    class: nginx
     configureCertmanager: true
+    annotations:
+      cert-manager.io/issuer: letsencrypt  # This shouldn't need to change unless you changed it
+    tls:
+      enabled: true
+    apiVersion: ''
     enabled: true
     path: /
     pathType: Prefix
     provider: nginx
-    tls: {}
     useNewIngressForCerts: false
   initialRootPassword: {}
   job:
@@ -430,7 +435,13 @@ global:
     keepalivesIdle: null
     keepalivesInterval: null
     main: {}
-    password: {}
+    host: postgresql-primary.postgresql.svc.cluster.local # This is assuming your primary postgresql is in the namespace postgresql, it goes pod-name.namespace.svc.cluster.local
+    port: 5432 # Assumes default port
+    database: gitlab # Should match what the postgres.yaml script has for the DATABASE
+    username: gitlab_admin # Should match what the postgres.yaml script has for the USERNAME
+    password:
+      secret: postgres-secret # Should be created prior to running this job and match that secret name
+      key: POSTGRES_PASSWORD # This should match the same password as the one in postgres.yaml, but just the key from the secret.
     tcpUserTimeout: null
   rails:
     bootsnap:
@@ -548,11 +559,6 @@ nginx-ingress:
       upstream-keepalive-time: 30s
       upstream-keepalive-timeout: 5
       use-http2: 'true'
-    image:
-      digest: sha256:016a25cf89bf7f930869ccd7cb3dd4acbe106cd4da1419804951ef9c8636f053
-      image: gitlab-org/cloud-native/mirror/images/ingress-nginx/controller
-      registry: registry.gitlab.com
-      tag: v1.11.7
     ingressClassByName: false
     ingressClassResource:
       name: '{{ include "ingress.class.name" $ | quote }}'
@@ -565,9 +571,6 @@ nginx-ingress:
           prometheus.io/port: '10254'
           prometheus.io/scrape: 'true'
     minAvailable: 1
-    podSecurityContext:
-      seccompProfile:
-        type: RuntimeDefault
     publishService:
       enabled: true
     replicaCount: 2
@@ -578,21 +581,13 @@ nginx-ingress:
     scope:
       enabled: true
     service:
-      appProtocol: false
       externalTrafficPolicy: Local
-      internal:
-        appProtocol: false
-      ipFamilies: []
-      ipFamilyPolicy: PreferDualStack
   defaultBackend:
-    podSecurityContext:
-      seccompProfile:
-        type: RuntimeDefault
     resources:
       requests:
         cpu: 5m
         memory: 5Mi
-  enabled: true
+  enabled: false # Should NOT be enabled because we set up our own issuer
   rbac:
     create: true
     scope: false
@@ -623,11 +618,6 @@ nginx-ingress-geo:
       use-forwarded-headers: true
       use-http2: 'true'
     electionID: ingress-controller-leader-geo
-    image:
-      digest: sha256:016a25cf89bf7f930869ccd7cb3dd4acbe106cd4da1419804951ef9c8636f053
-      image: gitlab-org/cloud-native/mirror/images/ingress-nginx/controller
-      registry: registry.gitlab.com
-      tag: v1.11.7
     ingressClassByName: false
     ingressClassResource:
       controllerValue: k8s.io/nginx-ingress-geo
@@ -641,9 +631,6 @@ nginx-ingress-geo:
           prometheus.io/port: '10254'
           prometheus.io/scrape: 'true'
     minAvailable: 1
-    podSecurityContext:
-      seccompProfile:
-        type: RuntimeDefault
     publishService:
       enabled: true
     replicaCount: 2
@@ -654,16 +641,8 @@ nginx-ingress-geo:
     scope:
       enabled: true
     service:
-      appProtocol: false
       externalTrafficPolicy: Local
-      internal:
-        appProtocol: false
-      ipFamilies: []
-      ipFamilyPolicy: PreferDualStack
   defaultBackend:
-    podSecurityContext:
-      seccompProfile:
-        type: RuntimeDefault
     resources:
       requests:
         cpu: 5m
@@ -678,16 +657,14 @@ nginx-ingress-geo:
   tcpExternalConfig: 'true'
 postgresql:
   auth:
-    existingSecret: '{{ include "gitlab.psql.password.secret" . }}'
-    password: bogus-satisfy-upgrade
-    postgresPassword: bogus-satisfy-upgrade
+    existingSecret: postgres-secret # Matches the secret that exists in the cluster
     secretKeys:
-      adminPasswordKey: postgresql-postgres-password
-      userPasswordKey: '{{ include "gitlab.psql.password.key" $ }}'
+      adminPasswordKey: POSTGRES_PASSWORD # Not sure if these matter to be different I left them the same because personally I don't think it matters in my case
+      userPasswordKey: POSTGRES_PASSWORD
     usePasswordFiles: false
   image:
     tag: 16.6.0
-  install: true
+  install: false # Should not be installed because we have our own cluster postgresql
   metrics:
     enabled: true
     service:

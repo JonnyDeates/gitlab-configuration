@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: postgresql
+  name: database-creator-gitlab
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-creator
+          image: postgres
+          command:
+            - sh
+            - -c
+            - |
+              #!/bin/sh
+              echo "Waiting for PostgreSQL to be ready..."
+              until pg_isready -h $HOST -U postgres -d postgres; do sleep 1; done;
+
+              echo "Creating database..."
+              PGPASSWORD="$POSTGRES_PASSWORD" psql -h $HOST -U postgres -d postgres -p 5432 << EOF
+                CREATE USER gitlab_admin WITH PASSWORD 'unique_password_goes_here';
+                CREATE DATABASE gitlab OWNER gitlab_admin;
+                \q
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: postgres-password
+            - name: HOST
+              value: postgresql-primary.postgresql.svc.cluster.local

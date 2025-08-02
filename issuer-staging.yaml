@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt
+  namespace: gitlab
+spec:
+  acme:
+    server:  https://acme-staging-v02.api.letsencrypt.org/directory
+    email:  example@gmail.com # Update this to your email address 
+    privateKeySecretRef:
+      name: letsencrypt
+    solvers:
+      - dns01:  # Change this to what you need for your instance. It is usually either dns01 or http01.
+          cloudflare: # Cloudflare is what I used, in the past I also used google networking
+            apiTokenSecretRef:
+              name: cloudflare-api-token-secret # You will need to create this Secret
+              key: api-token
