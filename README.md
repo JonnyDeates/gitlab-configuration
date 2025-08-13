@@ -25,12 +25,11 @@
 
 ### Additional Links:
 
-Youtube link for video instruction: 
+Youtube link for video instruction: https://www.youtube.com/watch?v=fg5sAgdP_T8
+
 Docs for postgresql configuration for install in github
-
-https://gitlab.com/gitlab-org/charts/gitlab/-/blob/master/doc/advanced/external-db/_index.md
-
-https://docs.gitlab.com/charts/advanced/external-db/
+ - https://gitlab.com/gitlab-org/charts/gitlab/-/blob/master/doc/advanced/external-db/_index.md
+ - https://docs.gitlab.com/charts/advanced/external-db/
 
 Docs for Gitlab runner
 
